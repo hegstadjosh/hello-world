@@ -1,13 +1,17 @@
 import Link from "next/link";
 import { getCaptions } from "@/lib/captions";
+import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
+  const configured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const user = configured ? (await (await createClient()).auth.getUser()).data.user : null;
   const { captions, status } = await getCaptions();
   return (
     <main className="mx-auto w-full max-w-5xl px-6 py-14 sm:px-10 sm:py-24">
       <header className="mb-12 border-b border-stone-300 pb-10">
+        <nav className="mb-8 flex flex-wrap gap-6 text-sm font-medium"><Link href={user ? "/members" : "/login"} className="text-orange-800 underline underline-offset-4">{user ? "Members’ lounge" : "Sign in with Google"}</Link>{user && <Link href="/profile">Your profile</Link>}</nav>
         <p className="mb-5 text-sm font-semibold uppercase tracking-[0.22em] text-orange-800">Campus, captioned.</p>
         <h1 className="max-w-2xl text-5xl font-semibold tracking-tight sm:text-7xl">A little too relatable.</h1>
         <p className="mt-6 max-w-xl text-lg leading-relaxed text-stone-600">Small observations about student life. Big deadline energy.</p>

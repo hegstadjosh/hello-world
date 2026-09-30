@@ -39,3 +39,28 @@ anonymous query returned all six records. Schema migration is tracked in
 `supabase/migrations/20260923191043_campus_captions.sql`. No existing shared
 classroom or business database was modified. Preview environment variables are
 configured on the existing Vercel hello-world project.
+
+## Week 3: Google sign-in and profiles
+
+The same app now uses Google OAuth with Supabase SSR cookies. `/auth/callback`
+exchanges the authorization code and directs new users to enter their names.
+`/members` and `/profile` verify the signed-in user on the server. Profile actions
+also verify identity and use that user's database permissions.
+
+Apply `supabase/migrations/20260930214150_profiles_and_avatars.sql` to the linked
+course project. A database trigger creates a nullable-name profile when an auth
+user is created. RLS permits only the owner to read/edit it. Photos are stored in
+the private `avatars` Storage bucket, limited to JPEG/PNG/WebP and 3 MB; each user
+can access only their own folder. The app displays short-lived signed image URLs.
+
+Google project: `campus-captioned-humor`. Configure a Web OAuth client with the
+redirect URI `https://xtrcxpdurxwuycbbncrl.supabase.co/auth/v1/callback`, then save
+its ID and secret in the course project's Google provider settings. No OAuth
+secret belongs in application code or Vercel's public environment variables.
+Allow each deployed app's exact `/auth/callback` URL in Supabase Auth redirect
+settings. The application requests only Google's basic identity scopes.
+
+Before submitting assignment 28, verify public caption loading, Google login,
+first-login name entry, editing both names, photo upload/persistence, sign-out,
+and signed-out redirects from protected pages. Submit the immutable Vercel URL.
+Previous Week 2 deployment remains available for rollback.
