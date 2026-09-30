@@ -14,5 +14,6 @@ export default async function Login({ searchParams }: { searchParams: Promise<{ 
     <p className="mb-8 mt-4 leading-relaxed text-stone-600">Sign in to make your profile and visit the members’ lounge.</p>
     {params.error && <p role="alert" className="mb-6 text-red-700">Sign-in wasn’t completed. Please try again.</p>}
     <GoogleButton />
+    <p className="mt-6 text-sm text-stone-500"><Link href="/privacy" className="underline">Privacy</Link></p>
   </main>;
 }
