@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { CAPTION_MODEL, buildPrompt, captionPhoto } from "@/lib/gemini";
+import { buildPrompt, captionModel, captionPhoto } from "@/lib/gemini";
 import { detectImage } from "@/lib/images";
 import { todaysTheme } from "@/lib/themes";
 
@@ -29,7 +29,7 @@ export async function createCaptions(_state: CreateState, form: FormData): Promi
   const prompt = buildPrompt(theme, hint);
   const imagePath = `${user.id}/${crypto.randomUUID()}.${image.extension}`;
   const { data: generation, error: reserveError } = await supabase.from("generations")
-    .insert({ image_path: imagePath, prompt, model: CAPTION_MODEL, theme }).select("id").single();
+    .insert({ image_path: imagePath, prompt, model: captionModel(), theme }).select("id").single();
   if (reserveError || !generation) {
     return { error: reserveError?.message === "generation_limit"
       ? "That’s five photos today. Come back tomorrow for a new theme."
@@ -49,7 +49,8 @@ export async function createCaptions(_state: CreateState, form: FormData): Promi
   let captions: string[];
   try {
     captions = await captionPhoto(bytes, image.contentType, prompt);
-  } catch {
+  } catch (error) {
+    console.error("Caption generation failed:", error instanceof Error ? error.message : error);
     return fail("The caption writer is stuck. Please try again in a minute.");
   }
   if (!captions.length) return fail("No captions came back for that photo. Try another one.");
