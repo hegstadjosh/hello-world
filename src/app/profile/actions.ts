@@ -2,16 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { detectImage } from "@/lib/images";
 import { requireProfile } from "@/lib/profile";
 
 export type SaveState = { error?: string };
-
-function imageExtension(bytes: Uint8Array) {
-  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "jpg";
-  if ([137,80,78,71,13,10,26,10].every((value, index) => bytes[index] === value)) return "png";
-  if (String.fromCharCode(...bytes.slice(0,4)) === "RIFF" && String.fromCharCode(...bytes.slice(8,12)) === "WEBP") return "webp";
-  return null;
-}
 
 export async function saveProfile(_state: SaveState, form: FormData): Promise<SaveState> {
   const { supabase, user, profile } = await requireProfile();
@@ -26,11 +20,10 @@ export async function saveProfile(_state: SaveState, form: FormData): Promise<Sa
   if (photo instanceof File && photo.size > 0) {
     if (photo.size > 3 * 1024 * 1024) return { error: "Choose a photo smaller than 3 MB." };
     const bytes = new Uint8Array(await photo.arrayBuffer());
-    const extension = imageExtension(bytes);
-    if (!extension) return { error: "Choose a JPG, PNG, or WebP photo." };
-    newPath = `${user.id}/${crypto.randomUUID()}.${extension}`;
-    const contentType = extension === "jpg" ? "image/jpeg" : `image/${extension}`;
-    const { error } = await supabase.storage.from("avatars").upload(newPath, bytes, { contentType, upsert: false });
+    const image = detectImage(bytes);
+    if (!image) return { error: "Choose a JPG, PNG, or WebP photo." };
+    newPath = `${user.id}/${crypto.randomUUID()}.${image.extension}`;
+    const { error } = await supabase.storage.from("avatars").upload(newPath, bytes, { contentType: image.contentType, upsert: false });
     if (error) return { error: "Your photo couldn’t be uploaded. Please try again." };
     avatarPath = newPath;
   }

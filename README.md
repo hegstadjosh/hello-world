@@ -64,3 +64,33 @@ Before submitting assignment 28, verify public caption loading, Google login,
 first-login name entry, editing both names, photo upload/persistence, sign-out,
 and signed-out redirects from protected pages. Submit the immutable Vercel URL.
 Previous Week 2 deployment remains available for rollback.
+
+## Week 4: AI captions and voting
+
+Signed-in users upload a photo at `/create`. The browser shrinks it to a JPEG,
+which also strips location metadata. `src/app/create/actions.ts` reserves a
+`generations` row, stores the photo in the public `snaps` bucket, asks Gemini
+(`src/lib/gemini.ts`) for three captions, saves them in `generated_captions`, and
+publishes the generation. The exact prompt and model are stored on each
+generation and shown under every feed card.
+
+The homepage feed is public. Signed-in users vote up or down on each caption;
+`castVote` in `src/app/votes.ts` inserts a `caption_votes` row, changes it, or
+removes it when the same vote is repeated. A trigger keeps vote totals on each
+caption, so individual votes stay private.
+
+Built for Sam, a Midwestern junior new to New York: a daily theme
+(`src/lib/themes.ts`, New York date) is woven into the prompt, and the feed
+highlights today's top caption.
+
+Migrations: `20261009220000_caption_generator_and_votes.sql` and
+`20261009223000_snaps_owner_read.sql`. RLS is on for every table. Anonymous users
+can read only finished generations, captions and vote totals. Users can create
+only their own generations, add captions only to their own pending generation,
+and read/write only their own votes (one per caption, primary key). They cannot
+set `user_id` or vote counters. A trigger allows five generations per user and
+100 overall per rolling day, counted before Gemini is called.
+
+Set `GEMINI_API_KEY` as a sensitive server-side Vercel variable; never prefix it
+with `NEXT_PUBLIC_`. Allow each new deployment's `/auth/callback` URL in
+Supabase Auth redirect settings.

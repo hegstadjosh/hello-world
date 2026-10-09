@@ -9,7 +9,7 @@ export default async function MembersPage() {
   if (!profile.first_name?.trim() || !profile.last_name?.trim()) redirect("/profile");
   const avatar = profile.avatar_path ? (await supabase.storage.from("avatars").createSignedUrl(profile.avatar_path, 3600)).data?.signedUrl : null;
   return <main className="mx-auto w-full max-w-3xl px-6 py-16">
-    <nav className="mb-12 flex flex-wrap items-center gap-6 text-sm font-medium"><Link href="/" className="text-orange-800">Campus, captioned.</Link><Link href="/profile">Edit profile</Link><form action={signOut}><button className="underline underline-offset-4">Sign out</button></form></nav>
+    <nav className="mb-12 flex flex-wrap items-center gap-6 text-sm font-medium"><Link href="/" className="text-orange-800">Campus, captioned.</Link><Link href="/create">Caption a photo</Link><Link href="/profile">Edit profile</Link><form action={signOut}><button className="underline underline-offset-4">Sign out</button></form></nav>
     <p className="mb-4 text-sm font-semibold uppercase tracking-widest text-orange-800">Members’ lounge</p>
     <div className="flex items-center gap-5">
       {avatar && <Image unoptimized src={avatar} alt="Your profile photo" width={80} height={80} className="size-20 rounded-full object-cover" />}
