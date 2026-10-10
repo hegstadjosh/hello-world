@@ -91,6 +91,8 @@ and read/write only their own votes (one per caption, primary key). They cannot
 set `user_id` or vote counters. A trigger allows five generations per user and
 100 overall per rolling day, counted before Gemini is called.
 
-Set `GEMINI_API_KEY` as a sensitive server-side Vercel variable; never prefix it
-with `NEXT_PUBLIC_`. Allow each new deployment's `/auth/callback` URL in
-Supabase Auth redirect settings.
+On Vercel the app calls `google/gemini-2.5-flash` through Vercel AI Gateway,
+authenticated by the deployment's own OIDC token, so no model key is stored. To
+call Google directly instead, set `GEMINI_API_KEY` as a sensitive server-side
+Vercel variable (never `NEXT_PUBLIC_`). Allow each new deployment's
+`/auth/callback` URL in Supabase Auth redirect settings.
