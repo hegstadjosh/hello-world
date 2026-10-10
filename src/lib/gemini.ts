@@ -19,6 +19,10 @@ export function buildPrompt(theme: string, hint: string) {
   ].filter(Boolean).join("\n");
 }
 
+// Thrown when the model provider is out of credit or rate-limiting us, so
+// the app can say captions are paused rather than asking for a retry.
+export class CaptionsPaused extends Error {}
+
 const schema = {
   type: "object",
   properties: { captions: { type: "array", items: { type: "string" }, minItems: 3, maxItems: 3 } },
@@ -41,6 +45,7 @@ async function viaGemini(key: string, image: Uint8Array, contentType: string, pr
       },
     }),
   });
+  if (response.status === 429) throw new CaptionsPaused("Gemini quota reached.");
   if (!response.ok) throw new Error(`Gemini request failed (${response.status}).`);
   const data = await response.json();
   return data?.candidates?.[0]?.content?.parts?.[0]?.text as string | undefined;
@@ -65,6 +70,7 @@ async function viaGateway(image: Uint8Array, contentType: string, prompt: string
       providerOptions: { google: { thinkingConfig: { thinkingBudget: 0 } } },
     }),
   });
+  if (response.status === 402 || response.status === 429) throw new CaptionsPaused(`AI Gateway unavailable (${response.status}).`);
   if (!response.ok) throw new Error(`AI Gateway request failed (${response.status}).`);
   const data = await response.json();
   return data?.choices?.[0]?.message?.content as string | undefined;

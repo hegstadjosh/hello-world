@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { buildPrompt, captionModel, captionPhoto } from "@/lib/gemini";
+import { buildPrompt, CaptionsPaused, captionModel, captionPhoto } from "@/lib/gemini";
 import { detectImage } from "@/lib/images";
 import { todaysTheme } from "@/lib/themes";
 
@@ -51,7 +51,9 @@ export async function createCaptions(_state: CreateState, form: FormData): Promi
     captions = await captionPhoto(bytes, image.contentType, prompt);
   } catch (error) {
     console.error("Caption generation failed:", error instanceof Error ? error.message : error);
-    return fail("The caption writer is stuck. Please try again in a minute.");
+    return fail(error instanceof CaptionsPaused
+      ? "Caption writing is paused for now. Your photo wasn’t posted; please try again later."
+      : "The caption writer is stuck. Please try again in a minute.");
   }
   if (!captions.length) return fail("No captions came back for that photo. Try another one.");
 
