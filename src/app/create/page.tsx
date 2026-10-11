@@ -13,7 +13,7 @@ export default async function CreatePage() {
     <Link href="/" className="text-sm font-semibold text-orange-800">← Campus, captioned.</Link>
     <p className="mt-10 text-sm font-semibold uppercase tracking-widest text-orange-800">Today’s theme · {theme}</p>
     <h1 className="mt-3 text-4xl font-semibold tracking-tight">Caption a photo.</h1>
-    <p className="mt-4 leading-relaxed text-stone-600">Upload something you saw this week. Gemini writes three captions, then everyone votes on the best one.</p>
+    <p className="mt-4 leading-relaxed text-stone-600">Upload something you saw this week. The AI writes three captions. Anyone can add their own to try to beat it, and everyone votes.</p>
     <CreateForm theme={theme} />
   </main>;
 }

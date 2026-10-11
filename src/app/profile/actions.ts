@@ -36,5 +36,5 @@ export async function saveProfile(_state: SaveState, form: FormData): Promise<Sa
   }
   revalidatePath("/profile");
   revalidatePath("/members");
-  redirect("/members");
+  redirect("/");
 }

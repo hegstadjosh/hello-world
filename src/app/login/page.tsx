@@ -6,7 +6,7 @@ import { GoogleButton } from "./google-button";
 export default async function Login({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (user) redirect("/members");
+  if (user) redirect("/");
   const params = await searchParams;
   return <main className="mx-auto w-full max-w-lg px-6 py-20">
     <Link href="/" className="text-sm font-semibold text-orange-800">← Campus, captioned.</Link>

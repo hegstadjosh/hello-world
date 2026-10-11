@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { buildPrompt, CaptionsPaused, captionModel, captionPhoto } from "@/lib/gemini";
+import { buildPrompt, CAPTION_MODEL, CaptionsPaused, captionPhoto } from "@/lib/captioner";
 import { detectImage } from "@/lib/images";
 import { todaysTheme } from "@/lib/themes";
 
@@ -24,12 +24,12 @@ export async function createCaptions(_state: CreateState, form: FormData): Promi
   if (!image) return { error: "Choose a JPG, PNG, or WebP photo." };
 
   // Reserve the generation first: the database enforces the daily limit
-  // before any Gemini request is made.
+  // before the caption model is called.
   const theme = todaysTheme();
   const prompt = buildPrompt(theme, hint);
   const imagePath = `${user.id}/${crypto.randomUUID()}.${image.extension}`;
   const { data: generation, error: reserveError } = await supabase.from("generations")
-    .insert({ image_path: imagePath, prompt, model: captionModel(), theme }).select("id").single();
+    .insert({ image_path: imagePath, prompt, model: CAPTION_MODEL, theme }).select("id").single();
   if (reserveError || !generation) {
     return { error: reserveError?.message === "generation_limit"
       ? "That’s five photos today. Come back tomorrow for a new theme."
