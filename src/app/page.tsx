@@ -1,6 +1,5 @@
 import Link from "next/link";
 import Image from "next/image";
-import { getCaptions } from "@/lib/captions";
 import { getFeed, humansVsAi, topCaptionToday, type FeedItem } from "@/lib/feed";
 import { createClient } from "@/lib/supabase/server";
 import { todaysTheme } from "@/lib/themes";
@@ -41,10 +40,7 @@ export default async function Home() {
   const configured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const supabase = configured ? await createClient() : null;
   const user = supabase ? (await supabase.auth.getUser()).data.user : null;
-  const [{ captions, status }, feed] = await Promise.all([
-    getCaptions(),
-    supabase ? getFeed(supabase, user?.id ?? null) : Promise.resolve({ items: [], status: "error" as const }),
-  ]);
+  const feed = supabase ? await getFeed(supabase, user?.id ?? null) : { items: [], status: "error" as const };
   const theme = todaysTheme();
   const top = topCaptionToday(feed.items);
   const score = humansVsAi(feed.items);
@@ -96,22 +92,6 @@ export default async function Home() {
         )}
       </section>
 
-      <section aria-labelledby="archive-heading" className="mt-16 border-t border-stone-300 pt-10">
-        <h2 id="archive-heading" className="mb-6 text-2xl font-semibold tracking-tight">From the archive</h2>
-        {status === "ready" && captions.length > 0 ? (
-          <ul className="grid gap-5 sm:grid-cols-2">
-            {captions.map((item) => (
-              <li key={item.id} className="rounded-2xl border border-stone-200 bg-white p-7 shadow-sm">
-                <p className="mb-5 text-xs font-semibold uppercase tracking-widest text-orange-800">{item.category}</p>
-                <h3 className="mb-3 text-xl font-semibold tracking-tight">{item.title}</h3>
-                <p className="text-lg leading-relaxed text-stone-600">{item.caption}</p>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-stone-600">{status === "ready" ? "Nothing here yet." : "The archive isn’t available right now."}</p>
-        )}
-      </section>
       <footer className="mt-12 text-sm text-stone-500">Made by Josh · The Humor Project · <Link href="/privacy" className="underline">Privacy</Link></footer>
     </main>
   );
