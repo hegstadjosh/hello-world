@@ -55,8 +55,7 @@ export default async function Home() {
           {user ? <><Link href="/create" className="text-orange-800 underline underline-offset-4">Caption a photo</Link><Link href="/members">Members’ lounge</Link><Link href="/profile">Your profile</Link></>
             : <Link href="/login" className="text-orange-800 underline underline-offset-4">Sign in with Google</Link>}
         </nav>
-        <p className="mb-5 text-sm font-semibold uppercase tracking-[0.22em] text-orange-800">Campus, captioned.</p>
-        <h1 className="max-w-2xl text-5xl font-semibold tracking-tight sm:text-7xl">A little too relatable.</h1>
+        <h1 className="max-w-2xl text-5xl font-semibold tracking-tight sm:text-7xl">Campus, captioned.</h1>
         <p className="mt-6 max-w-xl text-lg leading-relaxed text-stone-600">Post a photo from your week and the AI writes three captions. Think you’re funnier? Add yours. Everyone votes without knowing who wrote what.</p>
       </header>
 

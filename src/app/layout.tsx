@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Campus, captioned.",
-  description: "Small observations about student life. Big deadline energy.",
+  description: "Post a campus photo, get AI captions, and vote on the best ones.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
