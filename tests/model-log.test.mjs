@@ -23,13 +23,13 @@ function load(file, stubs) {
   });
   return exports;
 }
-const headers = { "next/headers": { headers: async () => new Map([["x-vercel-oidc-token", "secret-oidc-token"]]) } };
 function captioner(replies) {
   const calls = [];
   const mod = load("captioner.ts", {
-    modules: headers,
+    modules: { "server-only": {} },
+    process: { env: { OPENAI_API_KEY: "test-openai-key" } },
     async fetch(url, init) {
-      calls.push(init);
+      calls.push({ ...init, url });
       const next = replies.shift();
       if (next instanceof Error) throw next;
       return new Response(next.body, { status: next.status });
@@ -64,7 +64,7 @@ test("a provider 5xx is retried once and both calls are recorded", async () => {
 });
 test("paused, failed, unparsable and empty replies throw as before and are recorded as failed", async () => {
   for (const [status, body, expected] of [
-    [429, "rate limited", /AI Gateway unavailable \(429\)/],
+    [429, "rate limited", /OpenAI unavailable \(429\)/],
     [400, "bad request", /request failed \(400\)/],
     [200, "not json", /SyntaxError/],
   ]) {
@@ -94,16 +94,19 @@ test("a network failure or timeout is recorded with no status or body and is not
   assert.deepEqual([attempts[0].httpStatus, attempts[0].body, attempts[0].outcome], [null, null, "failed"]);
   assert.equal(attempts[0].error, "TimeoutError: The operation was aborted due to timeout");
 });
-test("the request still sends the same model, prompt, image and limits", async () => {
+test("the direct OpenAI request uses Luna, server credentials and supported bounded parameters", async () => {
   const { mod, calls } = captioner([{ status: 200, body: reply(["a"]) }]);
   await mod.captionPhoto(new Uint8Array([9]), "image/png", "the prompt", []);
   const sent = JSON.parse(calls[0].body);
-  assert.equal(sent.model, "openai/gpt-6-sol");
-  assert.equal(sent.max_tokens, 2500);
-  assert.deepEqual(sent.reasoning, { effort: "low" });
+  assert.equal(sent.model, "gpt-6-luna");
+  assert.equal(sent.max_completion_tokens, 2500);
+  assert.equal(sent.reasoning_effort, "low");
+  assert.equal(calls[0].url, "https://api.openai.com/v1/chat/completions");
+  assert.equal(sent.response_format.json_schema.strict, true);
+  assert.equal(sent.response_format.json_schema.schema.additionalProperties, false);
   assert.equal(sent.messages[0].content[1].text, "the prompt");
   assert.equal(sent.messages[0].content[0].image_url.url, "data:image/png;base64,CQ==");
-  assert.equal(calls[0].headers.authorization, "Bearer secret-oidc-token");
+  assert.equal(calls[0].headers.authorization, "Bearer test-openai-key");
 });
 
 function fakeDb({ stepTemplate = prompt.PROMPT_TEMPLATE, insertError = null, insertThrows = false, hang = "" } = {}) {
@@ -165,7 +168,7 @@ test("each attempt becomes one row linked to the request, the matching step and 
     [["gen-id", 1, "failed", 503, 7, 3, 1234], ["gen-id", 2, "succeeded", 200, 7, 3, 1234]],
   );
   assert.equal(inserted[0].prompt_template_sha256, prompt.PROMPT_TEMPLATE_SHA256);
-  assert.equal(inserted[0].model_identifier, "openai/gpt-6-sol");
+  assert.equal(inserted[0].model_identifier, "gpt-6-luna");
 });
 test("a stored step whose template differs from the one that ran is not linked", async () => {
   const { mod } = modelLog();

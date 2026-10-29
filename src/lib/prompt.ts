@@ -1,9 +1,8 @@
 import { createHash } from "node:crypto";
 
-// Captions come from OpenAI's GPT-6 Sol through Vercel AI Gateway, authenticated
-// by the deployment's own OIDC token. In a side-by-side test on the same photos
-// it was funnier and tighter than Gemini 2.5 Flash, for about $0.007 a photo.
-export const CAPTION_MODEL = "openai/gpt-6-sol";
+// Josh selected GPT-6 Luna through the direct OpenAI API.
+// The server authenticates with OPENAI_API_KEY; the prompt stays unchanged.
+export const CAPTION_MODEL = "gpt-6-luna";
 
 // The model looks for details, drafts eight jokes, then keeps the best three.
 // Only the final three are stored; the details and drafts are its scratch work.

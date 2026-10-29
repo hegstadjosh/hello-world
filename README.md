@@ -89,12 +89,14 @@ can read only finished generations, captions and vote totals. Users can create
 only their own generations, add captions only to their own pending generation,
 and read/write only their own votes (one per caption, primary key). They cannot
 set `user_id` or vote counters. A trigger allows five generations per user and
-100 overall per rolling day, counted before Gemini is called.
+100 overall per rolling day, counted before OpenAI is called.
 
-On Vercel the app calls `google/gemini-2.5-flash` through Vercel AI Gateway,
-authenticated by the deployment's own OIDC token, so no model key is stored. It
-uses the team's free gateway credit only; when that runs out (402) or the
-gateway rate-limits (429), posting shows a "paused" message and nothing is
-published. To call Google directly instead, set `GEMINI_API_KEY` as a sensitive server-side
-Vercel variable (never `NEXT_PUBLIC_`). Allow each new deployment's
-`/auth/callback` URL in Supabase Auth redirect settings.
+The app calls OpenAI directly at `https://api.openai.com/v1/chat/completions`
+with `gpt-6-luna`. Set `OPENAI_API_KEY` as a sensitive server-only environment
+variable, never `NEXT_PUBLIC_`. Vercel hosts the app but AI Gateway is not used.
+Requests retain a 40-second timeout and one retry on HTTP5xx, with a2500-token
+completion cap and low reasoning effort. A strict JSON schema carries details,
+drafts and captions. Model attempts are logged through the server-only Supabase
+service role. Keep `SUPABASE_SERVICE_ROLE_KEY` server-only too. Rate limits show
+the existing paused message. Allow each new deployment's `/auth/callback` URL
+in Supabase Auth redirect settings.

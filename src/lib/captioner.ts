@@ -1,15 +1,16 @@
-import { headers } from "next/headers";
+import "server-only";
 
 import { CAPTION_MODEL } from "@/lib/prompt";
 
 export { buildPrompt, CAPTION_MODEL, PROMPT_TEMPLATE, PROMPT_TEMPLATE_SHA256 } from "@/lib/prompt";
 
-// Thrown when the gateway is out of credit or rate-limiting us, so the app
+// Thrown when the provider is out of credit or rate-limiting us, so the app
 // can say captions are paused rather than asking for a retry.
 export class CaptionsPaused extends Error {}
 
 const schema = {
   type: "object",
+  additionalProperties: false,
   properties: {
     details: { type: "array", items: { type: "string" } },
     drafts: { type: "array", items: { type: "string" } },
@@ -18,10 +19,10 @@ const schema = {
   required: ["details", "drafts", "captions"],
 };
 
-async function askGateway(image: Uint8Array, contentType: string, prompt: string) {
-  const token = (await headers()).get("x-vercel-oidc-token") ?? process.env.VERCEL_OIDC_TOKEN;
-  if (!token) throw new Error("No AI Gateway credentials are available.");
-  return fetch("https://ai-gateway.vercel.sh/v1/chat/completions", {
+async function askOpenAI(image: Uint8Array, contentType: string, prompt: string) {
+  const token = process.env.OPENAI_API_KEY;
+  if (!token) throw new Error("No OpenAI credentials are available.");
+  return fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
     signal: AbortSignal.timeout(40_000),
@@ -31,16 +32,16 @@ async function askGateway(image: Uint8Array, contentType: string, prompt: string
         { type: "image_url", image_url: { url: `data:${contentType};base64,${Buffer.from(image).toString("base64")}` } },
         { type: "text", text: prompt },
       ] }],
-      response_format: { type: "json_schema", json_schema: { name: "captions", schema } },
+      response_format: { type: "json_schema", json_schema: { name: "captions", strict: true, schema } },
       // Reasoning tokens count toward this cap; low effort leaves room for the drafts.
-      max_tokens: 2500,
-      reasoning: { effort: "low" },
+      max_completion_tokens: 2500,
+      reasoning_effort: "low",
     }),
   });
 }
 
 // Request settings sent with every call; the admin app shows a copy of these.
-export const CAPTION_REQUEST = { max_tokens: 2500, reasoning: { effort: "low" }, timeout_ms: 40_000, retries: "once on HTTP 5xx" };
+export const CAPTION_REQUEST = { max_completion_tokens: 2500, reasoning_effort: "low", timeout_ms: 40_000, retries: "once on HTTP 5xx" };
 
 // One provider call as it happened, for the admin app's LLM responses screen.
 export type ModelAttempt = {
@@ -57,7 +58,7 @@ async function callOnce(image: Uint8Array, contentType: string, prompt: string, 
   attempts.push(record);
   const started = performance.now();
   try {
-    const response = await askGateway(image, contentType, prompt);
+    const response = await askOpenAI(image, contentType, prompt);
     record.httpStatus = response.status;
     record.body = await response.text();
     return { response, body: record.body, record };
@@ -79,12 +80,12 @@ export async function captionPhoto(
 ): Promise<string[]> {
   let { response, body, record } = await callOnce(image, contentType, prompt, attempts);
   if (response.status >= 500) {
-    record.error = `AI Gateway request failed (${response.status}); retried.`;
+    record.error = `OpenAI request failed (${response.status}); retried.`;
     ({ response, body, record } = await callOnce(image, contentType, prompt, attempts));
   }
   try {
-    if (response.status === 402 || response.status === 429) throw new CaptionsPaused(`AI Gateway unavailable (${response.status}).`);
-    if (!response.ok) throw new Error(`AI Gateway request failed (${response.status}).`);
+    if (response.status === 402 || response.status === 429) throw new CaptionsPaused(`OpenAI unavailable (${response.status}).`);
+    if (!response.ok) throw new Error(`OpenAI request failed (${response.status}).`);
     const data = JSON.parse(body);
     const text: string | undefined = data?.choices?.[0]?.message?.content;
     const json = text?.replace(/^```(?:json)?\s*|\s*```$/g, "");
