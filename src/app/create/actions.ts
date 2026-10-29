@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { buildPrompt, CAPTION_MODEL, CaptionsPaused, captionPhoto, type ModelAttempt } from "@/lib/captioner";
-import { recordModelAttempts } from "@/lib/model-log";
+import { recordModelAttempts, scrub } from "@/lib/model-log";
 import { detectImage } from "@/lib/images";
 import { todaysTheme } from "@/lib/themes";
 
@@ -52,7 +52,7 @@ export async function createCaptions(_state: CreateState, form: FormData): Promi
   try {
     captions = await captionPhoto(bytes, image.contentType, prompt, attempts);
   } catch (error) {
-    console.error("Caption generation failed:", error instanceof Error ? error.message : error);
+    console.error(`Caption generation failed: ${scrub(error instanceof Error ? error.message : String(error))}`);
     await recordModelAttempts(generation.id, attempts);
     return fail(error instanceof CaptionsPaused
       ? "Caption writing is paused for now. Your photo wasn’t posted; please try again later."

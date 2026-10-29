@@ -227,3 +227,13 @@ test("a stalled lookup or insert gives up at the deadline, aborts the requests a
 test("the logging module is marked server-only", () => {
   assert.match(readFileSync(new URL("../src/lib/model-log.ts", import.meta.url), "utf8"), /^import "server-only";/m);
 });
+test("the caption-failure server log scrubs the error before printing it", () => {
+  const source = readFileSync(new URL("../src/app/create/actions.ts", import.meta.url), "utf8");
+  const logged = source.match(/console\.error\([^;]*\);/g) ?? [];
+  assert.ok(logged.length > 0);
+  for (const line of logged) assert.match(line, /scrub\(/, `unscrubbed log: ${line}`);
+  // A JSON.parse failure can quote the start of the reply, as in this message shape.
+  const { mod } = modelLog();
+  const message = `Unexpected token 'B', "Bearer abc.def-123 key=sk-proj-AbCdEf123456" is not valid JSON`;
+  assert.doesNotMatch(mod.scrub(message), /AbCdEf123456|abc\.def-123/);
+});
