@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { buildPrompt, CAPTION_MODEL, CaptionsPaused, captionPhoto } from "@/lib/captioner";
+import { buildPrompt, CAPTION_MODEL, CaptionsPaused, captionPhoto, type ModelAttempt } from "@/lib/captioner";
+import { recordModelAttempts } from "@/lib/model-log";
 import { detectImage } from "@/lib/images";
 import { todaysTheme } from "@/lib/themes";
 
@@ -47,14 +48,18 @@ export async function createCaptions(_state: CreateState, form: FormData): Promi
   if (uploadError) return fail("Your photo couldn’t be uploaded. Please try again.");
 
   let captions: string[];
+  const attempts: ModelAttempt[] = [];
   try {
-    captions = await captionPhoto(bytes, image.contentType, prompt);
+    captions = await captionPhoto(bytes, image.contentType, prompt, attempts);
   } catch (error) {
     console.error("Caption generation failed:", error instanceof Error ? error.message : error);
+    await recordModelAttempts(generation.id, attempts);
     return fail(error instanceof CaptionsPaused
       ? "Caption writing is paused for now. Your photo wasn’t posted; please try again later."
       : "The caption writer is stuck. Please try again in a minute.");
   }
+  // Every provider call, including a retry, becomes one llm_responses row.
+  await recordModelAttempts(generation.id, attempts);
   if (!captions.length) return fail("No captions came back for that photo. Try another one.");
 
   const { error: captionError } = await supabase.from("generated_captions")
